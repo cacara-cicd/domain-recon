@@ -1,0 +1,15 @@
+# Workflow intermediates
+ips.txt
+scan.xml
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

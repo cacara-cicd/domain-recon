@@ -1,0 +1,62 @@
+name: Domain Port Scan
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'domains.txt'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: domain-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install nmap, RustScan and nmap-formatter
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nmap wget
+          # Install RustScan
+          wget https://github.com/RustScan/RustScan/releases/download/2.4.1/rustscan_2.4.1_amd64.deb
+          sudo dpkg -i rustscan_2.4.1_amd64.deb || sudo apt-get install -f -y
+          # Install nmap-formatter
+          wget https://github.com/vdjagilev/nmap-formatter/releases/download/v3.1.3/nmap-formatter-linux-amd64 -O nmap-formatter
+          chmod +x nmap-formatter
+          sudo mv nmap-formatter /usr/local/bin/
+
+      - name: Resolve domains to IPs
+        run: python3 scripts/resolve.py
+
+      - name: Run RustScan and hand off to nmap
+        run: |
+          # -b 2000 keeps batch size reasonable for shared runners
+          # Everything after -- is passed directly to nmap
+          rustscan -a ips.txt -b 2000 -- -sV -oX scan.xml
+
+      - name: Convert nmap XML to HTML
+        run: |
+          # nmap-formatter reads XML and writes HTML to stdout [citation:3][citation:16]
+          nmap-formatter html scan.xml > reports/latest.html
+          # Create a dated archive snapshot
+          cp reports/latest.html "reports/archive/$(date +%Y-%m-%d).html"
+
+      - name: Commit and push report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/
+          # Only commit if there are actual changes, to prevent failure on empty runs
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Update scan report $(date +%Y-%m-%d)"
+          git push
