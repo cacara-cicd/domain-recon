@@ -23,29 +23,29 @@ jobs:
       - name: Install nmap, RustScan and nmap-formatter
         run: |
           sudo apt-get update
-          sudo apt-get install -y nmap wget
-          # Install RustScan
-          wget https://github.com/RustScan/RustScan/releases/download/2.4.1/rustscan_2.4.1_amd64.deb
-          sudo dpkg -i rustscan_2.4.1_amd64.deb || sudo apt-get install -f -y
-          # Install nmap-formatter
-          wget https://github.com/vdjagilev/nmap-formatter/releases/download/v3.1.3/nmap-formatter-linux-amd64 -O nmap-formatter
-          chmod +x nmap-formatter
-          sudo mv nmap-formatter /usr/local/bin/
+          sudo apt-get install -y nmap wget unzip
+          
+          # 1. Install RustScan (new repository address, .zip package format)
+          wget https://github.com/bee-san/RustScan/releases/download/2.4.1/rustscan.deb.zip
+          unzip rustscan.deb.zip
+          sudo dpkg -i rustscan_2.4.1-1_amd64.deb || sudo apt-get install -f -y
+          
+          # 2. Install nmap-formatter (latest v3.1.4, .tar.gz package format)
+          wget https://github.com/vdjagilev/nmap-formatter/releases/download/v3.1.4/nmap-formatter-linux-amd64.tar.gz
+          tar -xzf nmap-formatter-linux-amd64.tar.gz
+          sudo mv nmap-formatter-linux-amd64 /usr/local/bin/nmap-formatter
+          sudo chmod +x /usr/local/bin/nmap-formatter
 
       - name: Resolve domains to IPs
         run: python3 scripts/resolve.py
 
       - name: Run RustScan and hand off to nmap
         run: |
-          # -b 2000 keeps batch size reasonable for shared runners
-          # Everything after -- is passed directly to nmap
           rustscan -a ips.txt -b 2000 -- -sV -oX scan.xml
 
       - name: Convert nmap XML to HTML
         run: |
-          # nmap-formatter reads XML and writes HTML to stdout [citation:3][citation:16]
           nmap-formatter html scan.xml > reports/latest.html
-          # Create a dated archive snapshot
           cp reports/latest.html "reports/archive/$(date +%Y-%m-%d).html"
 
       - name: Commit and push report
@@ -53,7 +53,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add reports/
-          # Only commit if there are actual changes, to prevent failure on empty runs
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
