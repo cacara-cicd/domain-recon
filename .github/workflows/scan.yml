@@ -33,7 +33,8 @@ jobs:
           # 2. Install nmap-formatter (latest v3.1.4, .tar.gz package format)
           wget https://github.com/vdjagilev/nmap-formatter/releases/download/v3.1.4/nmap-formatter-linux-amd64.tar.gz
           tar -xzf nmap-formatter-linux-amd64.tar.gz
-          sudo mv nmap-formatter-linux-amd64 /usr/local/bin/nmap-formatter
+          # Use wildcard to match the extracted file and move it
+          mv nmap-formatter-* /usr/local/bin/nmap-formatter
           sudo chmod +x /usr/local/bin/nmap-formatter
 
       - name: Resolve domains to IPs
