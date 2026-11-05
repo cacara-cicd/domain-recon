@@ -23,19 +23,18 @@ jobs:
       - name: Install nmap, RustScan and nmap-formatter
         run: |
           sudo apt-get update
-          sudo apt-get install -y nmap wget unzip
+          # Added golang-go to the installation list
+          sudo apt-get install -y nmap wget unzip golang-go
           
           # 1. Install RustScan (new repository address, .zip package format)
           wget https://github.com/bee-san/RustScan/releases/download/2.4.1/rustscan.deb.zip
           unzip rustscan.deb.zip
           sudo dpkg -i rustscan_2.4.1-1_amd64.deb || sudo apt-get install -f -y
           
-          # 2. Install nmap-formatter (latest v3.1.4, .tar.gz package format)
-          wget https://github.com/vdjagilev/nmap-formatter/releases/download/v3.1.4/nmap-formatter-linux-amd64.tar.gz
-          tar -xzf nmap-formatter-linux-amd64.tar.gz
-          # Use wildcard to match the extracted file and move it
-          mv nmap-formatter-* /usr/local/bin/nmap-formatter
-          sudo chmod +x /usr/local/bin/nmap-formatter
+          # 2. Install nmap-formatter via Go (compiles natively for the runner)
+          go install github.com/vdjagilev/nmap-formatter/v3@latest
+          # Add Go's binary path to the system PATH for the next steps
+          echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Resolve domains to IPs
         run: python3 scripts/resolve.py
